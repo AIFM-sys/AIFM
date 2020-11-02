@@ -1,0 +1,4 @@
+@set UPDATED 28 July 2013
+@set UPDATED-MONTH July 2013
+@set EDITION 2.2.6
+@set VERSION 2.2.6

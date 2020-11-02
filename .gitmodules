@@ -1,0 +1,12 @@
+[submodule "dpdk"]
+	path = shenango/dpdk
+	url = http://dpdk.org/git/dpdk
+	ignore = dirty
+[submodule "spdk"]
+	path = shenango/spdk
+	url = https://github.com/spdk/spdk
+	ignore = dirty
+[submodule "rdma-core"]
+	path = shenango/rdma-core
+	url = https://github.com/linux-rdma/rdma-core
+	ignore = dirty

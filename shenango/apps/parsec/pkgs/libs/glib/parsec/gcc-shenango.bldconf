@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# gcc-shenango.bldconf - configuration file for PARSEC
+
+
+echo "ERROR glib not supported in shenango"
+exit 1
+
+source ${PARSECDIR}/pkgs/libs/glib/parsec/gcc.bldconf
+

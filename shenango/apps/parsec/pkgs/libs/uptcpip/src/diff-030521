@@ -1,0 +1,10 @@
+? diff-030521
+Index: Makefile
+===================================================================
+RCS file: /cvs/bao-parsec/pkgs/libs/uptcpip/src/Makefile,v
+retrieving revision 1.1.1.1
+diff -r1.1.1.1 Makefile
+3c3
+< ARCH = $(shell uname -i)
+---
+> ARCH = $(shell uname -m)

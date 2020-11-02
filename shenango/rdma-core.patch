@@ -1,0 +1,184 @@
+diff --git a/providers/mlx5/dr_domain.c b/providers/mlx5/dr_domain.c
+index 11af45895..61dc6e451 100644
+--- a/providers/mlx5/dr_domain.c
++++ b/providers/mlx5/dr_domain.c
+@@ -188,9 +188,9 @@ static int dr_domain_caps_init(struct ibv_context *ctx,
+ 	if (ret)
+ 		return ret;
+ 
+-	/* Non FDB type is supported only over root table */
+-	if (dmn->type != MLX5DV_DR_DOMAIN_TYPE_FDB)
+-		return 0;
++//	/* Non FDB type is supported only over root table */
++//	if (dmn->type != MLX5DV_DR_DOMAIN_TYPE_FDB)
++//		return 0;
+ 
+ 	ret = dr_devx_query_device(ctx, &dmn->info.caps);
+ 	if (ret)
+@@ -285,6 +285,7 @@ mlx5dv_dr_domain_create(struct ibv_context *ctx,
+ 	dmn->ctx = ctx;
+ 	dmn->type = type;
+ 	atomic_init(&dmn->refcount, 1);
++	dmn->spinlock = 0;
+ 
+ 	if (dr_domain_caps_init(ctx, dmn)) {
+ 		dr_dbg(dmn, "Failed init domain, no caps\n");
+diff --git a/providers/mlx5/dr_rule.c b/providers/mlx5/dr_rule.c
+index 7a3bf633f..f6f90a602 100644
+--- a/providers/mlx5/dr_rule.c
++++ b/providers/mlx5/dr_rule.c
+@@ -32,6 +32,7 @@
+ 
+ #include <stdlib.h>
+ #include <ccan/minmax.h>
++#include "mlx5dv.h"
+ #include "mlx5dv_dr.h"
+ 
+ #define DR_RULE_MAX_STE_CHAIN (DR_RULE_MAX_STES + DR_ACTION_MAX_STES)
+@@ -1294,6 +1295,41 @@ struct mlx5dv_dr_rule *mlx5dv_dr_rule_create(struct mlx5dv_dr_matcher *matcher,
+ 	return rule;
+ }
+ 
++
++int switch_qp_action(struct mlx5dv_dr_rule *rule,
++	struct mlx5dv_dr_domain *dmn,
++	struct ibv_qp *nqp, struct ibv_qp *pqp)
++{
++	uint64_t old_qp_index, new_qp_index;
++	struct dr_ste *ste = &rule->rx.nic_matcher->s_htbl->ste_arr[0];
++	struct mlx5_qp *next_qp = to_mqp(nqp);
++	struct mlx5_qp *prev_qp = to_mqp(pqp);
++	struct postsend_info send_info = {};
++
++	assert(dmn->spinlock == 1);
++
++	assert(ste->htbl->chunk->num_of_entries == 1);
++
++	old_qp_index = DEVX_GET(ste_general, ste->hw_ste, next_table_base_39_32_size) << 27;
++	old_qp_index |= DEVX_GET(ste_general, ste->hw_ste, next_table_base_31_5_size);
++	old_qp_index &= ~0x1;
++
++	assert(old_qp_index == ((prev_qp->tir_icm_addr >> 5) & 0xffffffff));
++
++	new_qp_index = (next_qp->tir_icm_addr >> 5) | 1;
++	DEVX_SET(ste_general, ste->hw_ste, next_table_base_39_32_size, new_qp_index >> 27);
++	DEVX_SET(ste_general, ste->hw_ste, next_table_base_31_5_size, new_qp_index);
++
++	send_info.write.addr    = (uintptr_t) ste->hw_ste;
++	send_info.write.length  = DR_STE_SIZE_REDUCED;
++	send_info.write.lkey    = 0;
++	send_info.remote_addr   = dr_ste_get_mr_addr(ste);
++	send_info.rkey          = ste->htbl->chunk->rkey;
++
++	return dr_postsend_icm_data_unlocked(dmn, &send_info);
++}
++
++
+ int mlx5dv_dr_rule_destroy(struct mlx5dv_dr_rule *rule)
+ {
+ 	struct mlx5dv_dr_matcher *matcher = rule->matcher;
+diff --git a/providers/mlx5/dr_send.c b/providers/mlx5/dr_send.c
+index 64d892eae..c10bb720e 100644
+--- a/providers/mlx5/dr_send.c
++++ b/providers/mlx5/dr_send.c
+@@ -39,7 +39,7 @@
+ 
+ #define QUEUE_SIZE		128
+ #define SIGNAL_PER_DIV_QUEUE	16
+-#define TH_NUMS_TO_DRAIN	2
++#define TH_NUMS_TO_DRAIN	3
+ 
+ enum {
+ 	CQ_OK = 0,
+@@ -614,7 +614,7 @@ static void dr_fill_data_segs(struct dr_send_ring *send_ring,
+ 		send_info->read.send_flags = IBV_SEND_SIGNALED;
+ }
+ 
+-static int dr_postsend_icm_data(struct mlx5dv_dr_domain *dmn,
++int dr_postsend_icm_data_unlocked(struct mlx5dv_dr_domain *dmn,
+ 				struct postsend_info *send_info)
+ {
+ 	struct dr_send_ring *send_ring = dmn->send_ring;
+@@ -643,6 +643,31 @@ static int dr_postsend_icm_data(struct mlx5dv_dr_domain *dmn,
+ 	return 0;
+ }
+ 
++void postsend_lock(struct mlx5dv_dr_domain *dmn)
++{
++	while (__sync_lock_test_and_set(&dmn->spinlock, 1)) {
++		while (dmn->spinlock)
++			asm volatile("pause");
++	}
++}
++
++void postsend_unlock(struct mlx5dv_dr_domain *dmn)
++{
++	__sync_lock_release(&dmn->spinlock);
++}
++
++static int dr_postsend_icm_data(struct mlx5dv_dr_domain *dmn,
++				struct postsend_info *send_info)
++{
++	int ret;
++
++	postsend_lock(dmn);
++	ret = dr_postsend_icm_data_unlocked(dmn, send_info);
++	postsend_unlock(dmn);
++
++	return ret;
++}
++
+ static int dr_get_tbl_copy_details(struct mlx5dv_dr_domain *dmn,
+ 				   struct dr_ste_htbl *htbl,
+ 				   uint8_t **data,
+diff --git a/providers/mlx5/libmlx5.map b/providers/mlx5/libmlx5.map
+index 1558e0932..aeb4820b1 100644
+--- a/providers/mlx5/libmlx5.map
++++ b/providers/mlx5/libmlx5.map
+@@ -105,4 +105,7 @@ MLX5_1.10 {
+ 		mlx5dv_dr_table_create;
+ 		mlx5dv_dr_table_destroy;
+ 		mlx5dv_qp_ex_from_ibv_qp_ex;
++		switch_qp_action;
++		postsend_lock;
++		postsend_unlock;
+ } MLX5_1.9;
+diff --git a/providers/mlx5/mlx5dv.h b/providers/mlx5/mlx5dv.h
+index 4e9c2733a..2ef14f23e 100644
+--- a/providers/mlx5/mlx5dv.h
++++ b/providers/mlx5/mlx5dv.h
+@@ -1416,6 +1416,13 @@ mlx5dv_dr_rule_create(struct mlx5dv_dr_matcher *matcher,
+ 		      size_t num_actions,
+ 		      struct mlx5dv_dr_action *actions[]);
+ 
++
++void postsend_lock(struct mlx5dv_dr_domain *dmn);
++void postsend_unlock(struct mlx5dv_dr_domain *dmn);
++int switch_qp_action(struct mlx5dv_dr_rule *rule,
++	struct mlx5dv_dr_domain *dmn,
++	struct ibv_qp *nqp, struct ibv_qp *pqp);
++
+ int mlx5dv_dr_rule_destroy(struct mlx5dv_dr_rule *rule);
+ 
+ enum mlx5dv_dr_action_flags {
+diff --git a/providers/mlx5/mlx5dv_dr.h b/providers/mlx5/mlx5dv_dr.h
+index ffc400d7c..89188c0b9 100644
+--- a/providers/mlx5/mlx5dv_dr.h
++++ b/providers/mlx5/mlx5dv_dr.h
+@@ -629,6 +629,7 @@ struct mlx5dv_dr_domain {
+ 	struct dr_icm_pool		*action_icm_pool;
+ 	struct dr_send_ring		*send_ring;
+ 	struct dr_domain_info		info;
++	int spinlock;
+ };
+ 
+ struct dr_table_rx_tx {
+@@ -986,6 +987,8 @@ struct dr_send_ring {
+ int dr_send_ring_alloc(struct mlx5dv_dr_domain *dmn);
+ void dr_send_ring_free(struct dr_send_ring *send_ring);
+ int dr_send_ring_force_drain(struct mlx5dv_dr_domain *dmn);
++int dr_postsend_icm_data_unlocked(struct mlx5dv_dr_domain *dmn,
++				struct postsend_info *send_info);
+ int dr_send_postsend_ste(struct mlx5dv_dr_domain *dmn, struct dr_ste *ste,
+ 			 uint8_t *data, uint16_t size, uint16_t offset);
+ int dr_send_postsend_htbl(struct mlx5dv_dr_domain *dmn, struct dr_ste_htbl *htbl,

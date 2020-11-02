@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# gcc-shenango.bldconf - configuration file for PARSEC
+
+if [[ -z "$SHENANGODIR" ]]; then
+    echo "Must provide SHENANGODIR in environment"
+    exit 1
+fi
+
+source ${PARSECDIR}/config/gcc.bldconf
+
+RUNTIME_LIBS=$(cd $SHENANGODIR && make -f shared.mk print-RUNTIME_LIBS ROOT_PATH=$SHENANGODIR | grep RUNTIME_LIBS | sed 's/.*= //g')
+
+SHEN_LDFLAGS="-T ${SHENANGODIR}/base/base.ld"
+SHEN_LIBS_CXX="-Wl,--wrap=main ${SHENANGODIR}/shim/libshim.a -ldl ${SHENANGODIR}/bindings/cc/librt++.a ${RUNTIME_LIBS}"
+SHEN_LIBS="-Wl,--wrap=main ${SHENANGODIR}/shim/libshim.a -ldl ${RUNTIME_LIBS}"
+SHEN_CFLAGS="-DSHENANGO -I${SHENANGODIR}/inc -I ${PARSECDIR}/pkgs/libs/shen/inst/${PARSECPLAT}/include/"
+SHEN_CXXFLAGS="-DSHENANGO -I${SHENANGODIR}/inc -I ${SHENANGODIR}/bindings/cc -I ${PARSECDIR}/pkgs/libs/shen/inst/${PARSECPLAT}/include/"

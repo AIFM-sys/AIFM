@@ -1,0 +1,131 @@
+From 454f1d6f852804214a5a1d56a53d0fe3ba786b08 Mon Sep 17 00:00:00 2001
+From: Josh Fried <joshuafried@gmail.com>
+Date: Sun, 13 Jan 2019 18:42:41 -0500
+Subject: [PATCH] support manually registering memory for MLX4
+
+---
+ drivers/net/mlx4/Makefile                 |  2 ++
+ drivers/net/mlx4/mlx4_custom.h            |  8 ++++++++
+ drivers/net/mlx4/mlx4_mr.c                | 17 +++++++++++++++++
+ drivers/net/mlx4/mlx4_rxtx.c              |  2 +-
+ drivers/net/mlx4/mlx4_rxtx.h              | 12 ++++++++++++
+ drivers/net/mlx4/rte_pmd_mlx4_version.map |  4 ++++
+ 6 files changed, 44 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/net/mlx4/mlx4_custom.h
+
+diff --git a/drivers/net/mlx4/Makefile b/drivers/net/mlx4/Makefile
+index 92e932250..9308ce7ad 100644
+--- a/drivers/net/mlx4/Makefile
++++ b/drivers/net/mlx4/Makefile
+@@ -10,6 +10,8 @@ LIB_GLUE = $(LIB_GLUE_BASE).$(LIB_GLUE_VERSION)
+ LIB_GLUE_BASE = librte_pmd_mlx4_glue.so
+ LIB_GLUE_VERSION = 18.02.0
+ 
++SYMLINK-$(CONFIG_RTE_LIBRTE_MLX4_PMD)-include += mlx4_custom.h
++
+ # Sources.
+ SRCS-$(CONFIG_RTE_LIBRTE_MLX4_PMD) += mlx4.c
+ SRCS-$(CONFIG_RTE_LIBRTE_MLX4_PMD) += mlx4_ethdev.c
+diff --git a/drivers/net/mlx4/mlx4_custom.h b/drivers/net/mlx4/mlx4_custom.h
+new file mode 100644
+index 000000000..93520da22
+--- /dev/null
++++ b/drivers/net/mlx4/mlx4_custom.h
+@@ -0,0 +1,8 @@
++
++#ifndef RTE_PMD_MLX4_CUSTOM_H
++#define RTE_PMD_MLX4_CUSTOM_H
++
++void *mlx4_manual_reg_mr(uint8_t port_id, void *addr, size_t length, uint32_t *lkey_out);
++void mlx4_manual_dereg_mr(void *ibv_mr);
++
++#endif /* RTE_PMD_MLX4_CUSTOM_H */
+diff --git a/drivers/net/mlx4/mlx4_mr.c b/drivers/net/mlx4/mlx4_mr.c
+index a0094483a..7314de77c 100644
+--- a/drivers/net/mlx4/mlx4_mr.c
++++ b/drivers/net/mlx4/mlx4_mr.c
+@@ -1358,3 +1358,20 @@ mlx4_mr_release(struct rte_eth_dev *dev)
+ 	/* Free all remaining MRs. */
+ 	mlx4_mr_garbage_collect(dev);
+ }
++
++void *
++mlx4_manual_reg_mr(uint8_t port_id, void *addr, size_t length, uint32_t *lkey_out)
++{
++	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
++	struct priv *priv = dev->data->dev_private;
++	struct ibv_mr *ibv_mr = mlx4_glue->reg_mr(priv->pd, addr, length, IBV_ACCESS_LOCAL_WRITE);
++	if (ibv_mr && lkey_out) *lkey_out = rte_cpu_to_be_32(ibv_mr->lkey);
++
++	return ibv_mr;
++}
++
++void
++mlx4_manual_dereg_mr(void *ibv_mr)
++{
++	 mlx4_glue->dereg_mr(ibv_mr);
++}
+diff --git a/drivers/net/mlx4/mlx4_rxtx.c b/drivers/net/mlx4/mlx4_rxtx.c
+index 8c88effcd..73917699d 100644
+--- a/drivers/net/mlx4/mlx4_rxtx.c
++++ b/drivers/net/mlx4/mlx4_rxtx.c
+@@ -949,7 +949,7 @@ mlx4_tx_burst(void *dpdk_txq, struct rte_mbuf **pkts, uint16_t pkts_n)
+ 				elt->buf = NULL;
+ 				break;
+ 			}
+-			lkey = mlx4_tx_mb2mr(txq, buf);
++			lkey = mlx4_tx_mb2mr_custom(buf);
+ 			if (unlikely(lkey == (uint32_t)-1)) {
+ 				/* MR does not exist. */
+ 				DEBUG("%p: unable to get MP <-> MR association",
+diff --git a/drivers/net/mlx4/mlx4_rxtx.h b/drivers/net/mlx4/mlx4_rxtx.h
+index d7ec4e0c5..9a6605aeb 100644
+--- a/drivers/net/mlx4/mlx4_rxtx.h
++++ b/drivers/net/mlx4/mlx4_rxtx.h
+@@ -26,6 +26,7 @@
+ #include "mlx4.h"
+ #include "mlx4_prm.h"
+ #include "mlx4_mr.h"
++#include "mlx4_custom.h"
+ 
+ /** Rx queue counters. */
+ struct mlx4_rxq_stats {
+@@ -165,6 +166,9 @@ uint32_t mlx4_rx_addr2mr_bh(struct rxq *rxq, uintptr_t addr);
+ uint32_t mlx4_tx_mb2mr_bh(struct txq *txq, struct rte_mbuf *mb);
+ uint32_t mlx4_tx_update_ext_mp(struct txq *txq, uintptr_t addr,
+ 			       struct rte_mempool *mp);
++struct mem_info {
++	uint32_t lkey;
++};
+ 
+ /**
+  * Get Memory Pool (MP) from mbuf. If mbuf is indirect, the pool from which the
+@@ -243,4 +247,12 @@ mlx4_tx_mb2mr(struct txq *txq, struct rte_mbuf *mb)
+ 	return mlx4_tx_mb2mr_bh(txq, mb);
+ }
+ 
++static __rte_always_inline uint32_t
++mlx4_tx_mb2mr_custom(struct rte_mbuf *mb)
++{
++	struct mem_info *m = (struct mem_info *)(((char *) mb) +
++						sizeof(struct rte_mbuf));
++	return m->lkey;
++}
++
+ #endif /* MLX4_RXTX_H_ */
+diff --git a/drivers/net/mlx4/rte_pmd_mlx4_version.map b/drivers/net/mlx4/rte_pmd_mlx4_version.map
+index ef3539840..b932c2621 100644
+--- a/drivers/net/mlx4/rte_pmd_mlx4_version.map
++++ b/drivers/net/mlx4/rte_pmd_mlx4_version.map
+@@ -1,4 +1,8 @@
+ DPDK_2.0 {
+ 
+ 	local: *;
++
++	global:
++	mlx4_manual_reg_mr;
++	mlx4_manual_dereg_mr;
+ };
+-- 
+2.17.1
+

@@ -1,0 +1,4 @@
+bin/*
+!bin/.gitignore
+current.result
+log*

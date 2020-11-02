@@ -1,0 +1,3 @@
+The goal of this experiment is to show that AIFM achieves near-optimal performance on DataFrame applications even with a small amount of local memory.
+
+First, execute the setup_input.sh command in this folder which automatically downloads the datasets into the /mnt folder. Then, execute run.sh in every subfolder to get the data points of all systems. For each run, it generates a bunch of log.X files where X is the local memory size (in GB) used in the execution. The total working set size is 31 GB, so the local memory ratio is X / 31. There is an exception to the "local-only" folder; it puts everything in local memory, therefore only generates a single log file. For each log file, the penultimate line shows the total execution time in microseconds.

@@ -1,0 +1,97 @@
+<!--
+Copyright (c) 2019-2022, Hossein Moein
+All rights reserved.
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+* Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+* Neither the name of Hossein Moein and/or the DataFrame nor the
+  names of its contributors may be used to endorse or promote products
+  derived from this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL Hossein Moein BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<!DOCTYPE html>
+<html>
+<body>
+  <table align="center" border="1">
+
+    <tr bgcolor="lightblue">
+        <th>Signature</th> <th>Description</th> <th>Parameters</th>
+    </tr>
+    <tr bgcolor="lightgrey">
+      <td bgcolor="maroon"> <font color="white">
+        template&lt;typename T, typename V&gt;<BR>
+        DataFrame<BR>
+        transpose(IndexVecType &amp;&amp;indices, const V &amp;current_col_order, const V &amp;new_col_names) const; </font>
+      </td>
+      <td>
+        It transposes the data in the DataFrame.<BR>
+        The transpose() is only defined for DataFrame's that have a single data type.<BR>
+        <B>NOTE</b>: Since DataFrame columns have no ordering, the user must specify the order with current_col_order.
+      </td>
+      <td width = "33.3%">
+        <B>T</B>: The single type for all data columns<BR>
+        <B>V</B>: The type of string vector specifying the new names for new columns after transpose<BR>
+        <B>indices</B>: A vector on indices for the new transposed DataFrame. Its length must equal the number of rows in this DataFrame. Otherwise an exception is thrown<BR>
+        <B>current_col_order</B>: A vector of strings specifying the order of columns in the original DataFrame.<BR>
+        <B>new_col_names</B>: A vector of strings, specifying the column names for the new transposed DataFrame. Its length must equal the number of rows in this DataFrame. Otherwise an exception is thrown<BR>
+      </td>
+    </tr>
+
+  </table>
+
+  <pre style='color:#000000;background:#ffffff;'><span style='color:#800000; font-weight:bold; '>static</span> <span style='color:#800000; font-weight:bold; '>void</span> test_transpose<span style='color:#808030; '>(</span><span style='color:#808030; '>)</span>  <span style='color:#800080; '>{</span>
+
+    std<span style='color:#800080; '>::</span>cout <span style='color:#808030; '>&lt;</span><span style='color:#808030; '>&lt;</span> <span style='color:#800000; '>"</span><span style='color:#0f69ff; '>\n</span><span style='color:#0000e6; '>Testing transpose() ...</span><span style='color:#800000; '>"</span> <span style='color:#808030; '>&lt;</span><span style='color:#808030; '>&lt;</span> std<span style='color:#800080; '>::</span>endl<span style='color:#800080; '>;</span>
+
+    std<span style='color:#800080; '>::</span>vector<span style='color:#808030; '>&lt;</span><span style='color:#800000; font-weight:bold; '>unsigned</span> <span style='color:#800000; font-weight:bold; '>long</span><span style='color:#808030; '>></span>  idx <span style='color:#808030; '>=</span> <span style='color:#800080; '>{</span> <span style='color:#008c00; '>123450</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>123451</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>123452</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>123450</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>123455</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>123450</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>123449</span> <span style='color:#800080; '>}</span><span style='color:#800080; '>;</span>
+    std<span style='color:#800080; '>::</span>vector<span style='color:#808030; '>&lt;</span><span style='color:#800000; font-weight:bold; '>double</span><span style='color:#808030; '>></span> d1 <span style='color:#808030; '>=</span> <span style='color:#800080; '>{</span> <span style='color:#008c00; '>1</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>2</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>3</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>4</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>5</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>6</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>7</span> <span style='color:#800080; '>}</span><span style='color:#800080; '>;</span>
+    std<span style='color:#800080; '>::</span>vector<span style='color:#808030; '>&lt;</span><span style='color:#800000; font-weight:bold; '>double</span><span style='color:#808030; '>></span> d2 <span style='color:#808030; '>=</span> <span style='color:#800080; '>{</span> <span style='color:#008c00; '>8</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>9</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>10</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>11</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>12</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>13</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>14</span> <span style='color:#800080; '>}</span><span style='color:#800080; '>;</span>
+    std<span style='color:#800080; '>::</span>vector<span style='color:#808030; '>&lt;</span><span style='color:#800000; font-weight:bold; '>double</span><span style='color:#808030; '>></span> d3 <span style='color:#808030; '>=</span> <span style='color:#800080; '>{</span> <span style='color:#008c00; '>15</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>16</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>17</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>18</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>19</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>20</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>21</span> <span style='color:#800080; '>}</span><span style='color:#800080; '>;</span>
+    std<span style='color:#800080; '>::</span>vector<span style='color:#808030; '>&lt;</span><span style='color:#800000; font-weight:bold; '>double</span><span style='color:#808030; '>></span> d4 <span style='color:#808030; '>=</span> <span style='color:#800080; '>{</span> <span style='color:#008c00; '>22</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>23</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>24</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>25</span> <span style='color:#800080; '>}</span><span style='color:#800080; '>;</span>
+    MyDataFrame         df<span style='color:#800080; '>;</span>
+
+    df<span style='color:#808030; '>.</span>load_data<span style='color:#808030; '>(</span>std<span style='color:#800080; '>::</span>move<span style='color:#808030; '>(</span>idx<span style='color:#808030; '>)</span><span style='color:#808030; '>,</span>
+                 std<span style='color:#800080; '>::</span>make_pair<span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>col_1</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> d1<span style='color:#808030; '>)</span><span style='color:#808030; '>,</span>
+                 std<span style='color:#800080; '>::</span>make_pair<span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>col_2</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> d2<span style='color:#808030; '>)</span><span style='color:#808030; '>,</span>
+                 std<span style='color:#800080; '>::</span>make_pair<span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>col_3</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> d3<span style='color:#808030; '>)</span><span style='color:#808030; '>,</span>
+                 std<span style='color:#800080; '>::</span>make_pair<span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>col_4</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> d4<span style='color:#808030; '>)</span><span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
+
+    std<span style='color:#800080; '>::</span>vector<span style='color:#808030; '>&lt;</span><span style='color:#800000; font-weight:bold; '>unsigned</span> <span style='color:#800000; font-weight:bold; '>long</span><span style='color:#808030; '>></span>  tidx <span style='color:#808030; '>=</span> <span style='color:#800080; '>{</span> <span style='color:#008c00; '>100</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>101</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>102</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>104</span> <span style='color:#800080; '>}</span><span style='color:#800080; '>;</span>
+    std<span style='color:#800080; '>::</span>vector<span style='color:#808030; '>&lt;</span><span style='color:#800000; font-weight:bold; '>const</span> <span style='color:#800000; font-weight:bold; '>char</span> <span style='color:#808030; '>*</span><span style='color:#808030; '>></span>   tcol_names <span style='color:#808030; '>=</span>
+        <span style='color:#800080; '>{</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>tcol_1</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>tcol_2</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>tcol_3</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>tcol_4</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>tcol_5</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>tcol_6</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>tcol_7</span><span style='color:#800000; '>"</span> <span style='color:#800080; '>}</span><span style='color:#800080; '>;</span>
+    MyDataFrame                 tdf <span style='color:#808030; '>=</span>
+        df<span style='color:#808030; '>.</span>transpose<span style='color:#808030; '>&lt;</span><span style='color:#800000; font-weight:bold; '>double</span><span style='color:#808030; '>></span><span style='color:#808030; '>(</span>std<span style='color:#800080; '>::</span>move<span style='color:#808030; '>(</span>tidx<span style='color:#808030; '>)</span><span style='color:#808030; '>,</span>
+                             <span style='color:#ffffff; background:#dd0000; font-weight:bold; font-style:italic; '>{</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>col_1</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>col_2</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>col_3</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>col_4</span><span style='color:#800000; '>"</span> <span style='color:#ffffff; background:#dd0000; font-weight:bold; font-style:italic; '>}</span><span style='color:#808030; '>,</span>
+                             tcol_names<span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
+
+    std<span style='color:#800080; '>::</span>cout <span style='color:#808030; '>&lt;</span><span style='color:#808030; '>&lt;</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>Original DataFrame:</span><span style='color:#800000; '>"</span> <span style='color:#808030; '>&lt;</span><span style='color:#808030; '>&lt;</span> std<span style='color:#800080; '>::</span>endl<span style='color:#800080; '>;</span>
+    df<span style='color:#808030; '>.</span>write<span style='color:#808030; '>&lt;</span>std<span style='color:#800080; '>::</span>ostream<span style='color:#808030; '>,</span> <span style='color:#800000; font-weight:bold; '>unsigned</span> <span style='color:#800000; font-weight:bold; '>long</span><span style='color:#808030; '>,</span> <span style='color:#800000; font-weight:bold; '>double</span><span style='color:#808030; '>></span><span style='color:#808030; '>(</span>std<span style='color:#800080; '>::</span>cout<span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
+    std<span style='color:#800080; '>::</span>cout <span style='color:#808030; '>&lt;</span><span style='color:#808030; '>&lt;</span> <span style='color:#800000; '>"</span><span style='color:#0000e6; '>Transposed DataFrame:</span><span style='color:#800000; '>"</span> <span style='color:#808030; '>&lt;</span><span style='color:#808030; '>&lt;</span> std<span style='color:#800080; '>::</span>endl<span style='color:#800080; '>;</span>
+    tdf<span style='color:#808030; '>.</span>write<span style='color:#808030; '>&lt;</span>std<span style='color:#800080; '>::</span>ostream<span style='color:#808030; '>,</span> <span style='color:#800000; font-weight:bold; '>unsigned</span> <span style='color:#800000; font-weight:bold; '>long</span><span style='color:#808030; '>,</span> <span style='color:#800000; font-weight:bold; '>double</span><span style='color:#808030; '>></span><span style='color:#808030; '>(</span>std<span style='color:#800080; '>::</span>cout<span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
+<span style='color:#800080; '>}</span>
+</pre>
+  <!--Created using ToHtml.com on 2020-05-05 13:59:10 UTC -->
+  
+</body>
+</html>
+
+<!--
+Local Variables:
+mode:HTML
+tab-width:4
+c-basic-offset:4
+End:
+-->
