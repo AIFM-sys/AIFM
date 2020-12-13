@@ -46,7 +46,7 @@ void process_init(tcpconn_t *c) {
   far_mem.reset(far_mem_ptr);
 
   barrier();
-  int ack;
+  uint8_t ack;
   helpers::tcp_write_until(c, &ack, sizeof(ack));
 }
 
