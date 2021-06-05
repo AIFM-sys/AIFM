@@ -63,7 +63,7 @@ echo Y | sudo apt-get --fix-broken install
 echo Y | sudo apt-get install libnuma-dev libmnl-dev libnl-3-dev libnl-route-3-dev
 echo Y | sudo apt-get install libcrypto++-dev libcrypto++-doc libcrypto++-utils
 echo Y | sudo apt-get install software-properties-common
-echo Y | sudo apt-get install gcc-9 g++-9
+echo Y | sudo apt-get install gcc-9 g++-9 python-pip
 echo Y | sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 echo Y | sudo apt-get purge cmake
 sudo pip install cmake
