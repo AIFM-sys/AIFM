@@ -1,3 +1,4 @@
+#include <errno.h>
 
 #include <base/kref.h>
 #include <base/mempool.h>
@@ -72,12 +73,15 @@ int directpath_init(void)
 	if (ret)
 		return ret;
 
+#ifdef MLX_CX5
 	directpath_mode = RX_MODE_FLOW_STEERING;
 	ret = mlx5_init_flow_steering(rxq_out, txq_out, maxks, maxks);
-	if (ret) {
-		directpath_mode = RX_MODE_QUEUE_STEERING;
-		ret = mlx5_init_queue_steering(rxq_out, txq_out, maxks, maxks);
-	}
+#elif MLX_CX4
+	directpath_mode = RX_MODE_QUEUE_STEERING;
+	ret = mlx5_init_queue_steering(rxq_out, txq_out, maxks, maxks);
+#else
+	return -ENODEV;
+#endif
 
 	if (ret)
 		return ret;

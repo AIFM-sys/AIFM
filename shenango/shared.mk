@@ -5,8 +5,9 @@ $(error SHENANGO_PATH is not set)
 endif
 
 # build configuration options (set to y for "yes", n for "no")
-CONFIG_MLX5=y
-CONFIG_MLX4=n
+CONFIG_CX5=n
+CONFIG_CX4=y
+CONFIG_CX3=n
 CONFIG_SPDK=n
 CONFIG_DEBUG=n
 CONFIG_NATIVE=y
@@ -30,6 +31,19 @@ RUNTIME_LIBS = $(SHENANGO_PATH)/libruntime.a $(SHENANGO_PATH)/libnet.a \
 	       $(SHENANGO_PATH)/libbase.a -lpthread
 
 # parse configuration options
+ifeq ($(CONFIG_CX5),y)
+CONFIG_MLX5=y
+CONFIG_MLX4=n
+FLAGS += -DMLX_CX5
+else ifeq ($(CONFIG_CX4),y)
+CONFIG_MLX5=y
+CONFIG_MLX4=n
+FLAGS += -DMLX_CX4
+else ifeq ($(CONFIG_CX3),y)
+CONFIG_MLX5=n
+CONFIG_MLX4=y
+CONFIG_DIRECTPATH=n
+endif
 ifeq ($(CONFIG_DEBUG),y)
 FLAGS += -DDEBUG -DCCAN_LIST_DEBUG -rdynamic -O0 -ggdb -mssse3
 LDFLAGS += -rdynamic
