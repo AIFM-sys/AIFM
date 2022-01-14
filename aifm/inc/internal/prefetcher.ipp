@@ -11,7 +11,9 @@ FORCE_INLINE Prefetcher<InduceFn, InferFn, MappingFn>::Prefetcher(
     FarMemDevice *device, uint8_t *state, uint32_t object_data_size)
     : kPrefetchWinSize_(device->get_prefetch_win_size() / (object_data_size)),
       state_(state), object_data_size_(object_data_size) {
-  preempt_disable();
+  for (auto &trace : traces_) {
+    trace.counter = 0;
+  }
   prefetch_threads_.emplace_back(rt::Thread([&]() { prefetch_master_fn(); }));
   for (uint32_t i = 0; i < kMaxNumPrefetchSlaveThreads; i++) {
     auto &status = slave_status_[i].data;
@@ -21,8 +23,6 @@ FORCE_INLINE Prefetcher<InduceFn, InferFn, MappingFn>::Prefetcher(
     prefetch_threads_.emplace_back(
         rt::Thread([&, i]() { prefetch_slave_fn(i); }));
   }
-  traces_[0].counter = 0;
-  preempt_enable();
 }
 
 template <typename InduceFn, typename InferFn, typename MappingFn>
