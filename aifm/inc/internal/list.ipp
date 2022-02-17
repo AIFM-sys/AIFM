@@ -1,9 +1,10 @@
 #pragma once
 
-#include "thread.h"
-
 #include <algorithm>
 #include <cstring>
+
+#include "thread.h"
+#include "deref_scope.hpp"
 
 namespace far_memory {
 
@@ -95,6 +96,7 @@ FORCE_INLINE void GenericList::do_prefetch(LocalNode *local_node) {
   if (likely(!(local_node->swapping_in))) {
     local_node->swapping_in = true;
     rt::Thread([=] {
+      DerefScope scope;
       local_node->ptr.swap_in(false);
       barrier();
       local_node->swapping_in = false;

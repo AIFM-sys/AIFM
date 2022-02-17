@@ -106,6 +106,7 @@ bool GenericFarMemPtr::mutator_migrate_object() {
           ptr->meta().mutator_copy(new_local_object_addr);
         });
   }
+  object.free();
   return true;
 }
 

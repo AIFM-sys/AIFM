@@ -282,7 +282,7 @@ void do_work(uint16_t port) {
       master_thread = rt::Thread([c]() { master_fn(c); });
       has_shutdown = false;
     } else {
-      slave_threads.emplace_back(rt::Thread([c]() { slave_fn(c); }));
+      slave_threads.emplace_back([c]() { slave_fn(c); });
     }
   }
 }

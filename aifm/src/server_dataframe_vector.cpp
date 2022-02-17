@@ -66,13 +66,15 @@ void ServerDataFrameVector<T>::compute_reserve(uint16_t input_len,
                                                const uint8_t *input_buf,
                                                uint16_t *output_len,
                                                uint8_t *output_buf) {
-  auto writer_lock_np = lock_.get_writer_lock_np();
+  auto writer_lock = lock_.get_writer_lock();
   uint64_t new_capacity;
   assert(input_len == sizeof(new_capacity));
   new_capacity = *reinterpret_cast<const uint64_t *>(input_buf);
   assert(new_capacity > vec_.capacity());
+  preempt_disable();
   vec_.resize(new_capacity);
   vec_.resize(vec_.capacity());
+  preempt_enable();
   *output_len = sizeof(uint64_t);
   *(reinterpret_cast<uint64_t *>(output_buf)) = vec_.capacity();
 }

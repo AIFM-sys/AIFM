@@ -255,13 +255,12 @@ FarMemManager::RegionManager::RegionManager(uint64_t size, bool is_local) {
 void FarMemManager::swap_in(bool nt, GenericFarMemPtr *ptr) {
   assert(preempt_enabled());
 
-  auto &meta = ptr->meta();
-  auto obj_id = meta.get_object_id();
-  rmb();
-  if (unlikely(meta.is_present())) {
+  auto meta_snapshot = ptr->meta();
+  if (unlikely(meta_snapshot.is_present())) {
     return;
   }
 
+  auto obj_id = meta_snapshot.get_object_id();
   FarMemManager::lock_object(sizeof(obj_id),
                              reinterpret_cast<const uint8_t *>(&obj_id));
   auto guard = helpers::finally([&]() {
@@ -269,6 +268,7 @@ void FarMemManager::swap_in(bool nt, GenericFarMemPtr *ptr) {
                                  reinterpret_cast<const uint8_t *>(&obj_id));
   });
 
+  auto &meta = ptr->meta();
   if (likely(!meta.is_present())) {
     auto obj_addr = allocate_local_object(nt, meta.get_object_size());
     auto obj = Object(obj_addr);
