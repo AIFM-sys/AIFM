@@ -69,6 +69,10 @@ echo Y | sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 echo Y | sudo apt-get purge cmake
 sudo pip install cmake
 ```
+4) Set bash as the default shell.
+```
+chsh -s /bin/bash
+```
 
 ### Build Shenango and AIFM (on all nodes)
 For all nodes, clone our github repo in a same path, say, your home directory. 
