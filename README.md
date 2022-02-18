@@ -28,7 +28,7 @@ The 14th USENIX Symposium on Operating Systems Design and Implementation (OSDI â
 
 ## Supported Platform
 
-We have adapted AIFM to [Cloudlab](https://www.cloudlab.us/) for public access.
+We strongly recommend you to run AIFM using the xl170 instance of [Cloudlab](https://www.cloudlab.us/) as the code has been throughly tested there. We haven't done any test in other hardware environment. If you have trouble applying an cloudlab account, please contact us for assistance.
 
 ## Build Instructions
 ### Configure Cloudlab Instances
