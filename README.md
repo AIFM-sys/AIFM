@@ -18,6 +18,7 @@ Currently, AIFM supports C++ and TCP-enabled remote server memory.
   * [Run AIFM Tests](#run-aifm-tests)
   * [Reproduce Experiment Results](#reproduce-experiment-results)
   * [Repo Structure](#repo-structure)
+  * [Known Limitations](#known-limitations)
   * [Contact](#contact)
 
 ## Paper
@@ -115,6 +116,11 @@ Github Repo Root
         |---- test.sh   # The script for testing AIFM.
         |---- shared.sh # A collection of helper functions for other scripts.
 ```
+
+## Known Limitations
+AIFM is a research prototype rather than a production-ready system. Its current implementation has two main limitations.
+1. A thread cannot have more than one live `DerefScope` at any time (but you can have multiple live `DerefScope`s across different threads). For example, when executing `foo()->bar()` in a thread, if you've already instantiated a `DerefScope` in `foo()`, you must not instantiate another one in `bar()`. The right way is to pass the one in `foo()` as a reference to `bar()`.
+2. AIFM assumes that the __remote__ memory is sufficiently large so that it never garbage collects the dead (i.e., freed) objects in the __remote__ memory, see `FarMemManager::mutator_wait_for_gc_far_mem()` in `aifm/src/manager.cpp`. However, AIFM does garbage collects the dead objects in the __local__ memory since it's a precious resource.
 
 ## Contact
 Contact zainruan [at] csail [dot] mit [dot] edu for assistance.
