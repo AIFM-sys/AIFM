@@ -21,35 +21,72 @@ FORCE_INLINE WriterLock::WriterLock(ReaderWriterLock &lock) : lock_(lock) {
 
 FORCE_INLINE WriterLock::~WriterLock() { lock_.unlock_writer(); }
 
-FORCE_INLINE ReaderWriterLock::ReaderWriterLock() { writer_barrier_ = false; }
+FORCE_INLINE WriterLockNp::WriterLockNp(ReaderWriterLock &lock) : lock_(lock) {
+  lock.lock_writer_np();
+}
+
+FORCE_INLINE WriterLockNp::~WriterLockNp() { lock_.unlock_writer_np(); }
+
+FORCE_INLINE ReaderWriterLock::ReaderWriterLock() {
+  memset(reader_cnts_, 0, sizeof(reader_cnts_));
+}
 
 FORCE_INLINE void ReaderWriterLock::lock_reader() {
+  while (unlikely(ACCESS_ONCE(writer_locked_))) {
+    thread_yield();
+  }
+  preempt_disable();
+  auto core_num = get_core_num();
+  ACCESS_ONCE(reader_cnts_[core_num].data)++;
+  preempt_enable();
+}
+
+FORCE_INLINE void ReaderWriterLock::unlock_reader() {
+  preempt_disable();
+  auto core_num = get_core_num();
+  ACCESS_ONCE(reader_cnts_[core_num].data)--;
+  preempt_enable();
+}
+
+FORCE_INLINE void ReaderWriterLock::lock_writer_np() {
 retry:
-  rcu_lock_.reader_lock();
-  if (unlikely(ACCESS_ONCE(writer_barrier_))) {
-    rcu_lock_.reader_unlock();
-    do {
-      thread_yield();
-    } while (unlikely(ACCESS_ONCE(writer_barrier_)));
+  preempt_disable();
+  while (!__sync_bool_compare_and_swap(&writer_locked_, false, true)) {
+    preempt_enable();
+    thread_yield();
+    goto retry;
+  }
+  int32_t sum = 0;
+  FOR_ALL_SOCKET0_CORES(i) { sum += ACCESS_ONCE(reader_cnts_[i].data); }
+  if (sum) {
+    store_release(&writer_locked_, false);
+    preempt_enable();
+    thread_yield();
     goto retry;
   }
 }
 
-FORCE_INLINE void ReaderWriterLock::unlock_reader() {
-  rcu_lock_.reader_unlock();
+FORCE_INLINE void ReaderWriterLock::unlock_writer_np() {
+  store_release(&writer_locked_, false);
+  preempt_enable();
+  assert(preempt_enabled());
 }
 
 FORCE_INLINE void ReaderWriterLock::lock_writer() {
-  mutex_.Lock();
-  writer_barrier_ = true;
-  barrier();
-  rcu_lock_.writer_sync();
+  while (!__sync_bool_compare_and_swap(&writer_locked_, false, true)) {
+    thread_yield();
+  }
+retry:
+  int32_t sum = 0;
+  FOR_ALL_SOCKET0_CORES(i) { sum += ACCESS_ONCE(reader_cnts_[i].data); }
+  if (sum) {
+    thread_yield();
+    goto retry;
+  }
 }
 
 FORCE_INLINE void ReaderWriterLock::unlock_writer() {
-  writer_barrier_ = false;
-  barrier();
-  mutex_.Unlock();
+  store_release(&writer_locked_, false);
 }
 
 FORCE_INLINE ReaderLock ReaderWriterLock::get_reader_lock() {
@@ -60,4 +97,7 @@ FORCE_INLINE WriterLock ReaderWriterLock::get_writer_lock() {
   return WriterLock(*this);
 }
 
+FORCE_INLINE WriterLockNp ReaderWriterLock::get_writer_lock_np() {
+  return WriterLockNp(*this);
+}
 } // namespace far_memory

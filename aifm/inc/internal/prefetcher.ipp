@@ -14,13 +14,14 @@ FORCE_INLINE Prefetcher<InduceFn, InferFn, MappingFn>::Prefetcher(
   for (auto &trace : traces_) {
     trace.counter = 0;
   }
-  prefetch_threads_.emplace_back([&]() { prefetch_master_fn(); });
+  prefetch_threads_.emplace_back(rt::Thread([&]() { prefetch_master_fn(); }));
   for (uint32_t i = 0; i < kMaxNumPrefetchSlaveThreads; i++) {
     auto &status = slave_status_[i].data;
     status.task = nullptr;
     status.is_exited = false;
     wmb();
-    prefetch_threads_.emplace_back([&, i]() { prefetch_slave_fn(i); });
+    prefetch_threads_.emplace_back(
+        rt::Thread([&, i]() { prefetch_slave_fn(i); }));
   }
 }
 
@@ -80,7 +81,6 @@ Prefetcher<InduceFn, InferFn, MappingFn>::generate_prefetch_tasks() {
         wmb();
         status.cv.Signal();
       } else {
-        DerefScope scope;
         task->swap_in(nt_);
       }
     }
@@ -100,7 +100,6 @@ Prefetcher<InduceFn, InferFn, MappingFn>::prefetch_slave_fn(uint32_t tid) {
     if (likely(ACCESS_ONCE(*task_ptr))) {
       GenericUniquePtr *task = *task_ptr;
       ACCESS_ONCE(*task_ptr) = nullptr;
-      DerefScope scope;
       task->swap_in(nt_);
     } else {
       auto start_us = microtime();

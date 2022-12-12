@@ -19,24 +19,24 @@ GenericDataFrameVector::~GenericDataFrameVector() { cleanup(); }
 void GenericDataFrameVector::cleanup() {
   auto writer_lock = lock_.get_writer_lock();
   if (!moved_) {
-    std::vector<rt::Thread> threads;
-    for (uint32_t tid = 0; tid < helpers::kNumCPUs; tid++) {
-      threads.emplace_back([&, tid]() {
-        auto num_tasks_per_threads =
-            (chunk_ptrs_.size() == 0)
-                ? 0
-                : (chunk_ptrs_.size() - 1) / helpers::kNumCPUs + 1;
-        auto left = num_tasks_per_threads * tid;
-        auto right = std::min(left + num_tasks_per_threads, chunk_ptrs_.size());
-        for (uint64_t i = left; i < right; i++) {
-          chunk_ptrs_[i].free();
-        }
-      });
-    }
-    for (auto &thread : threads) {
-      thread.Join();
-    }
     FarMemManagerFactory::get()->destruct(ds_id_);
+  }
+  std::vector<rt::Thread> threads;
+  for (uint32_t tid = 0; tid < helpers::kNumCPUs; tid++) {
+    threads.emplace_back(rt::Thread([&, tid]() {
+      auto num_tasks_per_threads =
+          (chunk_ptrs_.size() == 0)
+              ? 0
+              : (chunk_ptrs_.size() - 1) / helpers::kNumCPUs + 1;
+      auto left = num_tasks_per_threads * tid;
+      auto right = std::min(left + num_tasks_per_threads, chunk_ptrs_.size());
+      for (uint64_t i = left; i < right; i++) {
+        chunk_ptrs_[i].free();
+      }
+    }));
+  }
+  for (auto &thread : threads) {
+    thread.Join();
   }
 }
 
@@ -59,7 +59,7 @@ void GenericDataFrameVector::expand(uint64_t num) {
 
   std::vector<rt::Thread> threads;
   for (uint32_t tid = 0; tid < helpers::kNumCPUs; tid++) {
-    threads.emplace_back([&, tid]() {
+    threads.emplace_back(rt::Thread([&, tid]() {
       auto num_tasks_per_threads =
           (num == 0) ? 0 : (num - 1) / helpers::kNumCPUs + 1;
       auto left = num_tasks_per_threads * tid;
@@ -74,7 +74,7 @@ void GenericDataFrameVector::expand(uint64_t num) {
           FarMemManagerFactory::get()->mutator_wait_for_gc_cache();
         }
       }
-    });
+    }));
   }
   for (auto &thread : threads) {
     thread.Join();
@@ -89,7 +89,7 @@ void GenericDataFrameVector::expand_no_alloc(uint64_t num) {
   const auto obj_size = Object::kHeaderSize + chunk_size_ + sizeof(uint64_t);
   std::vector<rt::Thread> threads;
   for (uint32_t tid = 0; tid < helpers::kNumCPUs; tid++) {
-    threads.emplace_back([&, tid]() {
+    threads.emplace_back(rt::Thread([&, tid]() {
       auto num_tasks_per_threads =
           (num == 0) ? 0 : (num - 1) / helpers::kNumCPUs + 1;
       auto left = num_tasks_per_threads * tid;
@@ -99,7 +99,7 @@ void GenericDataFrameVector::expand_no_alloc(uint64_t num) {
         auto &new_chunk_ptr = chunk_ptrs_[obj_id];
         new_chunk_ptr.meta().gc_wb(ds_id_, obj_size, obj_id);
       }
-    });
+    }));
   }
   for (auto &thread : threads) {
     thread.Join();
@@ -114,7 +114,7 @@ void GenericDataFrameVector::flush() {
     dirty_ = false;
     std::vector<rt::Thread> threads;
     for (uint32_t tid = 0; tid < helpers::kNumCPUs; tid++) {
-      threads.emplace_back([&, tid]() {
+      threads.emplace_back(rt::Thread([&, tid]() {
         auto num_tasks_per_threads =
             (chunk_ptrs_.size() == 0)
                 ? 0
@@ -124,7 +124,7 @@ void GenericDataFrameVector::flush() {
         for (uint64_t i = left; i < right; i++) {
           chunk_ptrs_[i].flush();
         }
-      });
+      }));
     }
     for (auto &thread : threads) {
       thread.Join();

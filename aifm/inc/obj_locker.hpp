@@ -2,18 +2,24 @@
 
 #include "sync.h"
 
+#include <memory>
 #include <optional>
 #include <map>
 
 namespace far_memory {
 
+struct LockEntry {
+  std::unique_ptr<rt::CondVar> cond;
+
+  LockEntry() {}
+};
+
 class ObjLocker {
 private:
   constexpr static uint32_t kNumMaps = 1024;
 
-  std::map<uint64_t, bool> maps_[kNumMaps];
+  std::map<uint64_t, LockEntry> maps_[kNumMaps];
   rt::Spin spins_[kNumMaps];
-  rt::CondVar cvs_[kNumMaps];
 
 public:
   ObjLocker();
