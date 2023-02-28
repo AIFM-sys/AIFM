@@ -49,7 +49,12 @@ echo Y | sudo apt-get install linux-headers-5.0.0-20 linux-headers-5.0.0-20-gene
 sudo reboot
 ```
 
-2) Install Mellanox OFED.
+2) Set bash as the default shell.
+```
+chsh -s /bin/bash
+```
+
+3) Install Mellanox OFED.
 ```
 wget "http://content.mellanox.com/ofed/MLNX_OFED-4.6-1.0.1.1/MLNX_OFED_LINUX-4.6-1.0.1.1-ubuntu18.04-x86_64.tgz"
 tar xvf MLNX_OFED_LINUX-4.6-1.0.1.1-ubuntu18.04-x86_64.tgz
@@ -58,8 +63,9 @@ sudo ./mlnxofedinstall --add-kernel-support --dpdk --upstream-libs # it's fine t
 sudo /etc/init.d/openibd restart
 ```
 
-3) Install libraries and tools.
+4) Install libraries and tools.
 ```
+sudo apt-get update
 echo Y | sudo apt-get --fix-broken install
 echo Y | sudo apt-get install libnuma-dev libmnl-dev libnl-3-dev libnl-route-3-dev
 echo Y | sudo apt-get install libcrypto++-dev libcrypto++-doc libcrypto++-utils
@@ -67,12 +73,10 @@ echo Y | sudo apt-get install software-properties-common
 echo Y | sudo apt-get install gcc-9 g++-9 python-pip
 echo Y | sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 echo Y | sudo apt-get purge cmake
+sudo pip install --upgrade pip
 sudo pip install cmake
 ```
-4) Set bash as the default shell.
-```
-chsh -s /bin/bash
-```
+
 
 ### Build Shenango and AIFM (on all nodes)
 For all nodes, clone our github repo in a same path, say, your home directory. 
